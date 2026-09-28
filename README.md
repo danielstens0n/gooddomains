@@ -19,7 +19,7 @@ Open **http://127.0.0.1:8000**. Switch between Balanced, Solid & established, Ca
 
 The 48 handwritten demo names are examples, **not availability or sale claims**. Some are existing brands. There are no invented prices. Selecting a price filter on the demo intentionally returns no results.
 
-To run the free **generate → bulk-check → shortlist** experiment, see [the step-by-step workflow](docs/bulk-check.md). It creates a reproducible candidate pool, a blind 100-name review sheet, and registrar-ready batches of up to 5,000 names. Real registrar checking remains a manual browser step; the result importer accepts an explicit normalized CSV template.
+To run the free **generate → bulk-check → shortlist** experiment, see [the step-by-step workflow](docs/bulk-check.md). It creates a reproducible candidate pool, a blind 100-name review sheet, and registrar-ready batches of up to 5,000 names. Check through a registrar browser tool or an available Spaceship connector, then import normalized CSV results. `export-feedback` uses your keeps and rejects to select the next unchecked batch, with an explanation for each candidate.
 
 ![Gooddomains explorer with scientific ranking selected](docs/explorer.png)
 
@@ -89,7 +89,7 @@ The importer extracts second-level `.com` NS delegation owners, ignores apex and
 
 Zone data is a route to broad coverage of delegated domains. [ICANN describes zone-file access and its agreements](https://www.icann.org/resources/pages/zfa-2013-06-28-en); [CZDS](https://czds.icann.org/) directs users to contact the registry when a TLD is not listed. Access may require approval and is subject to the applicable agreement. Do not commit downloaded datasets to the public repository.
 
-**A zone entry does not mean “for sale,” and absence does not mean “available.”** Zone files omit some registered domains, as discussed in [ICANN's SSAC advisory](https://www.icann.org/en/system/files/files/sac-097-en.pdf). Availability checks should eventually run only on shortlisted names through a suitable registrar integration. There is no bulk RDAP crawler here; [Verisign's RDAP terms](https://www.verisign.com/legal-center/rdap-terms/) constrain high-volume automated access.
+**A zone entry does not mean “for sale,” and absence does not mean “available.”** Zone files omit some registered domains, as discussed in [ICANN's SSAC advisory](https://www.icann.org/en/system/files/files/sac-097-en.pdf). Run availability checks on shortlisted names through a suitable registrar tool. There is no bulk RDAP crawler here; [Verisign's RDAP terms](https://www.verisign.com/legal-center/rdap-terms/) constrain high-volume automated access.
 
 ### Import behavior
 
@@ -138,6 +138,7 @@ gooddomains/
   ingest.py       streaming text / CSV / zone adapters
   generate.py     reproducible naming strategies and diverse registrar batches
   checks.py       registrar evidence imports and experiment reports
+  feedback.py     review-guided selection of unchecked candidates
   ranking.py      explicit scoring rules and impression profiles
   store.py        SQLite index, source observations, queries, reviews
   cli.py         import, top, stats, rescore, serve
