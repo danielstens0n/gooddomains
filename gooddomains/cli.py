@@ -3,7 +3,7 @@ import json
 import sqlite3
 import sys
 
-from . import checks, generate, ingest, store
+from . import checks, feedback, generate, ingest, store
 from .ranking import PROFILES, score
 
 
@@ -41,6 +41,10 @@ def main():
     report = commands.add_parser("experiment-report", help="Compare availability and shortlist yield by strategy")
     report.add_argument("--run", required=True)
     report.add_argument("--days", type=int, default=30)
+    personal = commands.add_parser("export-feedback", help="Choose unchecked candidates using your keeps and rejects")
+    personal.add_argument("--output", required=True)
+    personal.add_argument("--count", type=int, default=200)
+    personal.add_argument("--max-component", type=int, default=12)
     commands.add_parser("stats")
     commands.add_parser("rescore", help="Recompute all profiles after editing the scoring model")
     serve = commands.add_parser("serve", help="Open the local domain explorer")
@@ -67,6 +71,9 @@ def main():
                 result = checks.import_checks(db, args.path, provider=args.provider, manifest=args.manifest)
             elif args.command == "experiment-report":
                 result = checks.report(db, run=args.run, days=args.days)
+            elif args.command == "export-feedback":
+                result = feedback.export(db, output=args.output, count=args.count,
+                                         max_component=args.max_component)
             elif args.command == "stats":
                 result = store.stats(db)
             else:

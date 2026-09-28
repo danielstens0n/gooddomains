@@ -1,6 +1,6 @@
 # Free candidate-generation experiment
 
-This workflow uses local generation and scoring, plus a **manual registrar browser check**. No paid API, model calls, scraper, account credentials, or purchases are involved. It does not establish that generated names are available.
+This workflow uses local generation and scoring, plus a **manual registrar browser check** or an available registrar connector. The browser path needs no paid API or scraper. Generating names alone does not establish availability; only recorded registrar results do. Neither path purchases domains.
 
 ## 1. Generate a reproducible pool
 
@@ -97,4 +97,31 @@ In the browser, choose **Registrar status → Available to register** and **Pric
 
 The experiment report groups candidates by brief and strategy, showing checked/resolved counts, available counts, availability rate, and kept-available names per 1,000 imported checks. Unknown results are excluded from the availability-rate denominator but included in checked counts. Stale/unchecked names are reported separately. Partial or available-only exports bias these metrics; they are not estimates for the entire candidate pool. Names can appear in multiple runs, so comparisons are not independent trials.
 
-**Initial success target:** 20 names from a completed batch worth considering, followed by fresh registrar confirmation of the finalists. This is an experimental target, not a claim that the first batch will achieve it. The pilot's current status is generated/exported; there are no real registrar results yet.
+**Initial success target:** 20 names from a completed batch worth considering, followed by fresh registrar confirmation of the finalists. This is an experimental target, not a claim that the first batch will achieve it. Live checks and personal reviews stay in the local database and ignored `data/private/` artifacts.
+
+## Use your reviews for the next batch
+
+After marking names Keep or Pass in the explorer:
+
+```sh
+python3 -m gooddomains export-feedback --output data/private/feedback-next --count 200
+```
+
+This exports unchecked, unreviewed candidates, using a bounded score adjustment
+for components appearing in your keeps and rejects. Each component appears at
+most 12 times by default (`--max-component`). The manifest records the exact
+review snapshot, matched components, and queue scores. Existing name scores and
+reviews stay intact. This is a selection heuristic, not a trained preference
+model; positive-only feedback does not establish what you dislike. Previously
+checked names are excluded, including stale checks; use the existing freshness
+filters to identify names that need a separate recheck.
+
+When the Spaceship connector is available, its `domains_check_availability`
+tool checks up to 20 names per call without purchasing anything. Save the raw
+responses privately, then normalize explicit `taken` to `registered` and
+`available` to `available` (or `premium` when `price.isPremium` is true).
+Unrecognized results remain `unknown`. Store the actual observation time,
+`price.amount`, `price.currency`, and `12 * price.pricedYears` as the registration
+term. The quoted amount already includes any ICANN fee. Preserve missing prices
+as missing; never substitute an advertised generic price. These are initial
+registration quotes, not renewal prices or aftermarket valuations.
