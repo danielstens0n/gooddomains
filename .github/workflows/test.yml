@@ -18,3 +18,6 @@ jobs:
       - run: python -m gooddomains export-check --run ci --count 100 --output data/private/ci
       - run: python -m gooddomains import-check data/private/ci/results-template.csv --provider ci --manifest data/private/ci/manifest.json
       - run: python -m gooddomains experiment-report --run ci
+      - run: python -m gooddomains scan-plan --run ci-scan --count 100
+      - run: python -m gooddomains scan-pending --run ci-scan
+      - run: python -m gooddomains scan-export --run ci-scan --output data/private/ci-scan

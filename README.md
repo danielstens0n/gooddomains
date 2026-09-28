@@ -21,6 +21,12 @@ The 48 handwritten demo names are examples, **not availability or sale claims**.
 
 To run the free **generate → bulk-check → shortlist** experiment, see [the step-by-step workflow](docs/bulk-check.md). It creates a reproducible candidate pool, a blind 100-name review sheet, and registrar-ready batches of up to 5,000 names. Check through a registrar browser tool or an available Spaceship connector, then import normalized CSV results. `export-feedback` uses your keeps and rejects to select the next unchecked batch, with an explanation for each candidate.
 
+For broader discovery, [the daily scan workflow and service plan](docs/daily-service.md)
+cover review-independent sampling, resumable registrar checks, refreshes, and
+reports. `python3 scripts/daily_scan.py --count 1000` runs the worker on macOS or
+Linux with Spaceship read-only API credentials supplied through the environment.
+Scheduling requires a configured host; it is not activated by cloning this repo.
+
 ![Gooddomains explorer with scientific ranking selected](docs/explorer.png)
 
 ## What makes a great .com?
@@ -139,6 +145,7 @@ gooddomains/
   generate.py     reproducible naming strategies and diverse registrar batches
   checks.py       registrar evidence imports and experiment reports
   feedback.py     review-guided selection of unchecked candidates
+  daily.py        durable broad scans, registrar adapter, and daily worker
   ranking.py      explicit scoring rules and impression profiles
   store.py        SQLite index, source observations, queries, reviews
   cli.py         import, top, stats, rescore, serve

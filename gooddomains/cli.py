@@ -3,7 +3,7 @@ import json
 import sqlite3
 import sys
 
-from . import checks, feedback, generate, ingest, store
+from . import checks, daily, feedback, generate, ingest, store
 from .ranking import PROFILES, score
 
 
@@ -45,12 +45,28 @@ def main():
     personal.add_argument("--output", required=True)
     personal.add_argument("--count", type=int, default=200)
     personal.add_argument("--max-component", type=int, default=12)
+    for name in ('scan-plan', 'scan-pending', 'scan-import', 'scan-report', 'scan-export', 'scan-run'):
+        scan = commands.add_parser(name, help='Plan, resume, import, or report a broad registrar scan')
+        scan.add_argument('--run', required=True)
+        if name in ('scan-plan', 'scan-run'):
+            scan.add_argument('--count', type=int, default=1000)
+        if name == 'scan-pending':
+            scan.add_argument('--limit', type=int, default=20)
+        if name == 'scan-import':
+            scan.add_argument('path')
+        if name == 'scan-run':
+            scan.add_argument('--output', default='data/private/scans')
+        if name == 'scan-export':
+            scan.add_argument('--output', required=True)
     commands.add_parser("stats")
     commands.add_parser("rescore", help="Recompute all profiles after editing the scoring model")
     serve = commands.add_parser("serve", help="Open the local domain explorer")
     serve.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
     try:
+        if args.command == 'scan-run':
+            print(json.dumps(daily.work(args.db, run=args.run, count=args.count, output=args.output), indent=2))
+            return
         if args.command == "serve":
             from .server import serve
             serve(args.db, args.port)
@@ -74,6 +90,17 @@ def main():
             elif args.command == "export-feedback":
                 result = feedback.export(db, output=args.output, count=args.count,
                                          max_component=args.max_component)
+            elif args.command == 'scan-plan':
+                result = daily.plan(db, run=args.run, count=args.count)
+            elif args.command == 'scan-pending':
+                result = daily.pending(db, run=args.run, limit=args.limit)
+            elif args.command == 'scan-import':
+                from pathlib import Path
+                result = daily.import_response(db, run=args.run, payload=json.loads(Path(args.path).read_text()))
+            elif args.command == 'scan-report':
+                result = daily.report(db, run=args.run)
+            elif args.command == 'scan-export':
+                result = daily.export_results(db, run=args.run, output=args.output)
             elif args.command == "stats":
                 result = store.stats(db)
             else:
