@@ -3,7 +3,7 @@ import json
 import sqlite3
 import sys
 
-from . import ingest, store
+from . import checks, generate, ingest, store
 from .ranking import PROFILES, score
 
 
@@ -22,6 +22,25 @@ def main():
     top.add_argument("--query", default="")
     top.add_argument("--review", choices=["keep", "reject", "unreviewed"], default="")
     top.add_argument("--limit", type=int, default=20)
+    top.add_argument("--availability", choices=["available", "registered", "premium", "unknown", "unchecked", "stale"], default="")
+    top.add_argument("--price-type", choices=["asking", "registration"], default="asking")
+    gen = commands.add_parser("generate", help="Generate local candidates with brief and strategy provenance")
+    gen.add_argument("--count", type=int, default=25000)
+    gen.add_argument("--seed", type=int, default=42)
+    gen.add_argument("--run", default="experiment-001")
+    export = commands.add_parser("export-check", help="Export a diverse batch for a free registrar browser check")
+    export.add_argument("--run", required=True)
+    export.add_argument("--output", required=True, help="New directory for names, manifest, review, and results template")
+    export.add_argument("--count", type=int, default=5000)
+    export.add_argument("--seed", type=int, default=42)
+    export.add_argument("--max-component", type=int, default=100)
+    check = commands.add_parser("import-check", help="Import normalized registrar CSV observations")
+    check.add_argument("path")
+    check.add_argument("--provider", required=True)
+    check.add_argument("--manifest", help="Limit imported domains to a batch manifest")
+    report = commands.add_parser("experiment-report", help="Compare availability and shortlist yield by strategy")
+    report.add_argument("--run", required=True)
+    report.add_argument("--days", type=int, default=30)
     commands.add_parser("stats")
     commands.add_parser("rescore", help="Recompute all profiles after editing the scoring model")
     serve = commands.add_parser("serve", help="Open the local domain explorer")
@@ -37,7 +56,17 @@ def main():
                 result = ingest.ingest(db, args.path, source=args.source, format=args.format)
             elif args.command == "top":
                 result = store.listing(db, query=args.query, budget=args.budget, days=args.days,
-                                       review=args.review, limit=args.limit, profile=args.profile)
+                                       review=args.review, limit=args.limit, profile=args.profile,
+                                       availability=args.availability, price_type=args.price_type)
+            elif args.command == "generate":
+                result = generate.generate(db, count=args.count, seed=args.seed, run=args.run)
+            elif args.command == "export-check":
+                result = generate.export_check(db, run=args.run, output=args.output, count=args.count,
+                                               seed=args.seed, max_component=args.max_component)
+            elif args.command == "import-check":
+                result = checks.import_checks(db, args.path, provider=args.provider, manifest=args.manifest)
+            elif args.command == "experiment-report":
+                result = checks.report(db, run=args.run, days=args.days)
             elif args.command == "stats":
                 result = store.stats(db)
             else:

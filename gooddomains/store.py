@@ -37,6 +37,23 @@ def connect(path):
             PRIMARY KEY(domain, source)
         );
         CREATE INDEX IF NOT EXISTS price_idx ON observations(price_usd, observed_at, domain);
+        CREATE TABLE IF NOT EXISTS candidates (
+            domain TEXT NOT NULL REFERENCES domains(domain), run TEXT NOT NULL,
+            brief TEXT NOT NULL, strategy TEXT NOT NULL, components TEXT NOT NULL,
+            PRIMARY KEY(domain,run)
+        );
+        CREATE TABLE IF NOT EXISTS checks (
+            id INTEGER PRIMARY KEY, domain TEXT NOT NULL REFERENCES domains(domain),
+            provider TEXT NOT NULL, status TEXT NOT NULL
+                CHECK(status IN ('available','registered','premium','unknown')),
+            price REAL, currency TEXT, checked_at TEXT NOT NULL, imported_at TEXT NOT NULL,
+            evidence_url TEXT, term_months INTEGER,
+            UNIQUE(domain,provider,checked_at)
+        );
+        CREATE INDEX IF NOT EXISTS check_latest_idx ON checks(domain,checked_at DESC,id DESC);
+        CREATE VIEW IF NOT EXISTS latest_checks AS
+            SELECT c.* FROM checks c WHERE c.id=(SELECT c2.id FROM checks c2
+                WHERE c2.domain=c.domain ORDER BY c2.checked_at DESC,c2.id DESC LIMIT 1);
     """)
     try:
         yield db
@@ -88,7 +105,12 @@ def put(db, domain, *, source, kind="candidate", price_usd=None, observed_at=Non
         (domain, source, kind, observed_at, timestamp, price_usd, listing_url or None))
 
 
-def listing(db, *, query="", budget=None, days=30, review="", limit=100, offset=0, profile="general"):
+def listing(db, *, query="", budget=None, days=30, review="", limit=100, offset=0, profile="general",
+            availability="", price_type="asking"):
+    if availability not in ("", "available", "registered", "premium", "unknown", "unchecked", "stale"):
+        raise ValueError("Unknown availability filter")
+    if price_type not in ("asking", "registration"):
+        raise ValueError("Unknown price type")
     if profile not in PROFILES:
         raise ValueError("Unknown ranking profile")
     if not 1 <= limit <= 500 or offset < 0 or not 1 <= days <= 3650:
@@ -99,12 +121,24 @@ def listing(db, *, query="", budget=None, days=30, review="", limit=100, offset=
         raise ValueError("Unknown review filter")
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
     clauses, args = ["1=1"], []
+    if availability == "unchecked":
+        clauses.append("NOT EXISTS (SELECT 1 FROM checks c WHERE c.domain=d.domain)")
+    elif availability:
+        condition = "c.checked_at<?" if availability == "stale" else "c.checked_at>=? AND c.status=?"
+        clauses.append(f"EXISTS (SELECT 1 FROM latest_checks c WHERE c.domain=d.domain AND {condition})")
+        args.append(cutoff)
+        if availability != "stale":
+            args.append(availability)
     if query:
         # Literal substring matching: % and _ are not wildcard operators here.
         clauses.append("instr(d.domain, ?) > 0")
         args.append(query.strip().lower())
     if budget is not None:
-        clauses.append("EXISTS (SELECT 1 FROM observations o WHERE o.domain=d.domain AND o.price_usd<=? AND o.observed_at>=?)")
+        if price_type == "registration":
+            clauses.append("""EXISTS (SELECT 1 FROM latest_checks c WHERE c.domain=d.domain
+                AND c.status='available' AND c.currency='USD' AND c.price<=? AND c.checked_at>=?)""")
+        else:
+            clauses.append("EXISTS (SELECT 1 FROM observations o WHERE o.domain=d.domain AND o.price_usd<=? AND o.observed_at>=?)")
         args.extend([budget, cutoff])
     if review == "unreviewed":
         clauses.append("d.review IS NULL")
@@ -125,6 +159,10 @@ def listing(db, *, query="", budget=None, days=30, review="", limit=100, offset=
             "SELECT * FROM observations WHERE domain=? ORDER BY observed_at DESC", (row["domain"],))]
         prices = [o["price_usd"] for o in item["observations"] if o["price_usd"] is not None and o["observed_at"] >= cutoff]
         item["recent_price_usd"] = min(prices) if prices else None
+        check = db.execute("SELECT * FROM latest_checks WHERE domain=?", (row["domain"],)).fetchone()
+        item["latest_check"] = dict(check) if check else None
+        item["availability"] = (check["status"] if check["checked_at"] >= cutoff else "stale") if check else "unchecked"
+        item["candidates"] = [dict(c) for c in db.execute("SELECT * FROM candidates WHERE domain=?", (row["domain"],))]
         items.append(item)
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 

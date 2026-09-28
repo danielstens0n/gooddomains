@@ -6,6 +6,8 @@ A founder supplies a company description, intended audience, desired impression,
 
 The current implementation proves the import → rank by impression → inspect → shortlist loop. Its scores have not been validated against human preferences.
 
+A parallel free [candidate-generation experiment](bulk-check.md) now implements generation, diverse batch export, normalized registrar-result import, and yield reporting. Actual registrar checks are manual and the first pilot remains unchecked. Use the 100-name review sheet to calibrate taste before running the larger batch.
+
 ## 1. Start with a buyable slice
 
 Find one permitted marketplace, auction, or broker feed with fixed USD asking prices, ideally in the $500–$5,000 range. Import 10k–100k rows and manually audit a sample of URLs, prices, timestamps, and sale terms. The current adapter accepts an exported CSV; connecting a live provider remains to be done. Auction bids and monthly installments must not be represented as buy-now prices.

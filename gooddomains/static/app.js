@@ -1,7 +1,7 @@
 const $ = id => document.getElementById(id);
 let profile = 'general', offset = 0, total = 0, sequence = 0, timer;
 const limit = 50;
-const money = value => new Intl.NumberFormat('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0}).format(value);
+const money = (value, currency='USD') => new Intl.NumberFormat('en-US', {style:'currency', currency, maximumFractionDigits:2}).format(value);
 function node(tag, text, cls) { const el = document.createElement(tag); if(text !== undefined) el.textContent = text; if(cls) el.className = cls; return el; }
 async function api(path, options) {
   const response = await fetch(path, options);
@@ -17,7 +17,14 @@ function row(item, index) {
   name.append(node('span', '.com')); info.append(name);
   info.append(node('span', [...new Set(item.observations.map(o => o.source))].join(' · '), 'source'));
   const priced = item.recent_price_usd !== null;
-  info.append(node('div', priced ? `${money(item.recent_price_usd)} observed asking price · availability unverified` : 'No recent price evidence · availability unknown', priced ? 'price known' : 'price'));
+  info.append(node('div', priced ? `${money(item.recent_price_usd)} observed aftermarket asking price` : 'No recent aftermarket asking price', priced ? 'price known' : 'price'));
+  const check = item.latest_check;
+  let availability = 'Not checked at a registrar';
+  if (check) {
+    availability = `${item.availability === 'stale' ? 'Stale check' : 'Observed ' + check.status} · ${check.provider} · ${check.checked_at.slice(0,10)}`;
+    if (check.price !== null) availability += ` · ${money(check.price, check.currency)} ${check.status === 'available' ? 'registration / ' + check.term_months + ' months' : 'premium quote'}`;
+  }
+  info.append(node('div', availability, item.availability === 'available' ? 'price known' : 'price'));
   el.append(info);
   const details = node('details', undefined, 'score-wrap'), summary = node('summary');
   summary.append(node('span', item.score.toFixed(1), 'score'), node('span', 'view score'));
@@ -29,6 +36,17 @@ function row(item, index) {
     breakdown.append(p);
   }
   breakdown.append(node('p', `Model: ${item.ranking.version} / ${item.ranking.profile}`));
+  for (const candidate of item.candidates || []) {
+    const metadata = JSON.parse(candidate.components);
+    breakdown.append(node('p', `${candidate.run} · ${candidate.brief} · ${candidate.strategy} · ${metadata.parts.join(' + ')}`));
+  }
+  if (check) {
+    const p = node('p', `Registrar check: ${check.status} · ${check.checked_at}. Reconfirm before purchase.`);
+    if (check.evidence_url) {
+      const a = node('a', ' Source'); a.href = check.evidence_url; a.target = '_blank'; a.rel = 'noopener noreferrer'; p.append(a);
+    }
+    breakdown.append(p);
+  }
   for (const observation of item.observations) {
     const p = node('p', `${observation.source} · ${observation.kind} · observed ${observation.observed_at}${observation.price_usd == null ? '' : ' · ' + money(observation.price_usd)}`);
     if (observation.listing_url) {
@@ -54,7 +72,7 @@ function row(item, index) {
 }
 async function load() {
   const request = ++sequence;
-  const params = new URLSearchParams({profile, offset, limit, q:$('query').value, budget:$('budget').value, days:$('days').value, review:$('review').value});
+  const params = new URLSearchParams({profile, offset, limit, q:$('query').value, budget:$('budget').value, days:$('days').value, review:$('review').value, availability:$('availability').value, price_type:$('price-type').value});
   error('');
   try {
     const [data, stats] = await Promise.all([api('/api/domains?' + params), api('/api/stats')]);
@@ -69,7 +87,7 @@ async function load() {
     if (!data.items.length) {
       const empty = node('div', undefined, 'empty');
       empty.append(node('strong', stats.domains ? 'No names match these filters.' : 'Your index starts here.'));
-      empty.append(node('span', $('budget').value ? 'The demo has no price evidence. Import dated marketplace prices or choose “All names”.' : 'Try another filter, or import a domain list from the terminal.'));
+      empty.append(node('span', $('availability').value || $('budget').value ? 'No matching recent evidence. Import registrar results, or widen your filters. Generated names start unchecked.' : 'Try another filter, or import a domain list from the terminal.'));
       if (!stats.domains) empty.append(node('code', 'python3 -m gooddomains import data/demo.txt --source demo'));
       $('results').append(empty);
     }
@@ -90,7 +108,7 @@ async function init() {
     $('profile-note').textContent = profiles[profile].description;
     $('filters').onsubmit = e => e.preventDefault();
     $('query').oninput = () => { ++sequence; clearTimeout(timer); timer = setTimeout(() => { offset = 0; load(); }, 180); };
-    for (const id of ['budget','days','review']) $(id).onchange = () => { offset = 0; load(); };
+    for (const id of ['budget','days','review','availability','price-type']) $(id).onchange = () => { offset = 0; load(); };
     $('prev').onclick = () => { offset = Math.max(0, offset - limit); load(); };
     $('next').onclick = () => { offset += limit; load(); };
     await load();

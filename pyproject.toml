@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gooddomains"
-version = "0.1.0"
+version = "0.2.0"
 description = "An explainable, local-first index for discovering better .com names"
 requires-python = ">=3.11"
 license = "MIT"

@@ -47,7 +47,8 @@ def handler_for(db_path):
                             budget=float(params["budget"]) if params.get("budget") else None,
                             days=int(params.get("days", 30)), review=params.get("review", ""),
                             limit=int(params.get("limit", 50)), offset=int(params.get("offset", 0)),
-                            profile=params.get("profile", "general"))
+                            profile=params.get("profile", "general"),
+                            availability=params.get("availability", ""), price_type=params.get("price_type", "asking"))
                     elif parsed.path == "/api/stats":
                         result = store.stats(db)
                     elif parsed.path == "/api/profiles":

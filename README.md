@@ -19,6 +19,8 @@ Open **http://127.0.0.1:8000**. Switch between Balanced, Solid & established, Ca
 
 The 48 handwritten demo names are examples, **not availability or sale claims**. Some are existing brands. There are no invented prices. Selecting a price filter on the demo intentionally returns no results.
 
+To run the free **generate → bulk-check → shortlist** experiment, see [the step-by-step workflow](docs/bulk-check.md). It creates a reproducible candidate pool, a blind 100-name review sheet, and registrar-ready batches of up to 5,000 names. Real registrar checking remains a manual browser step; the result importer accepts an explicit normalized CSV template.
+
 ![Gooddomains explorer with scientific ranking selected](docs/explorer.png)
 
 ## What makes a great .com?
@@ -42,6 +44,8 @@ Inspired by the [PG discussion](https://x.com/paulg/status/2104600731361677493) 
 - Four deterministic ranking profiles with component values, weights, and explanations.
 - Search, pagination, persisted keep/pass decisions, and dated USD asking-price filters.
 - A CLI for imports, querying, and rescoring; a loopback-only browser interface.
+- Local generation across three company briefs and four strategies, with provenance and diverse batch exports.
+- Registrar-result imports with timestamps, currencies, registration terms, status filters, and experiment yield reports.
 - Automated importer, ranking, storage, and HTTP tests; GitHub Actions on Python 3.11 and 3.13.
 
 ## Import your data
@@ -112,7 +116,7 @@ The model lives in [gooddomains/ranking.py](gooddomains/ranking.py); the origina
 python3 -m gooddomains rescore
 ```
 
-The vocabulary is intentionally small and biases rankings toward familiar English nature/material words. Invented names are under-rewarded. Letter patterns cannot establish pronunciation, spelling ambiguity, distinctiveness, meaning in other languages, or audience response. Company briefs, semantic retrieval, trademark checks, and learned preferences are **not implemented**. Keep/pass is currently one global shortlist, not a context-specific training label.
+The vocabulary is intentionally small and biases rankings toward familiar English nature/material words. Invented names are under-rewarded. Letter patterns cannot establish pronunciation, spelling ambiguity, distinctiveness, meaning in other languages, or audience response. Generation has three fixed company briefs; free-form brief interpretation, semantic retrieval, trademark checks, and learned preferences are **not implemented**. Keep/pass is currently one global shortlist, not a context-specific training label.
 
 ## CLI and development
 
@@ -132,6 +136,8 @@ Optionally install with `python3 -m pip install -e .` in a virtual environment t
 ```text
 gooddomains/
   ingest.py       streaming text / CSV / zone adapters
+  generate.py     reproducible naming strategies and diverse registrar batches
+  checks.py       registrar evidence imports and experiment reports
   ranking.py      explicit scoring rules and impression profiles
   store.py        SQLite index, source observations, queries, reviews
   cli.py         import, top, stats, rescore, serve

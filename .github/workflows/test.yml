@@ -14,3 +14,7 @@ jobs:
       - run: python -m unittest discover -s tests -v
       - run: python -m gooddomains import data/demo.txt --source demo
       - run: python -m gooddomains top --profile scientific --limit 5
+      - run: python -m gooddomains generate --run ci --count 300
+      - run: python -m gooddomains export-check --run ci --count 100 --output data/private/ci
+      - run: python -m gooddomains import-check data/private/ci/results-template.csv --provider ci --manifest data/private/ci/manifest.json
+      - run: python -m gooddomains experiment-report --run ci
