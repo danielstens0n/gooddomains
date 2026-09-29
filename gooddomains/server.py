@@ -42,13 +42,17 @@ def handler_for(db_path):
             try:
                 params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
                 with store.connect(db_path) as db:
-                    if parsed.path == "/api/domains":
+                    if parsed.path in ("/api/domains", "/api/discover"):
+                        discovery = parsed.path == '/api/discover'
                         result = store.listing(db, query=params.get("q", ""),
                             budget=float(params["budget"]) if params.get("budget") else None,
-                            days=int(params.get("days", 30)), review=params.get("review", ""),
+                            days=int(params.get("days", 7 if discovery else 30)), review=params.get("review", ""),
                             limit=int(params.get("limit", 50)), offset=int(params.get("offset", 0)),
                             profile=params.get("profile", "general"),
-                            availability=params.get("availability", ""), price_type=params.get("price_type", "asking"))
+                            availability='available' if discovery else params.get("availability", ""),
+                            price_type='registration' if discovery else params.get("price_type", "asking"),
+                            min_length=int(params.get('min_length', 1)), max_length=int(params.get('max_length', 63)),
+                            name_type=params.get('name_type', ''), sort=params.get('sort', 'shortest' if discovery else 'score'))
                     elif parsed.path == "/api/stats":
                         result = store.stats(db)
                     elif parsed.path == "/api/profiles":

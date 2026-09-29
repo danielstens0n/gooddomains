@@ -184,6 +184,17 @@ class ServerTests(unittest.TestCase):
             self.get("/api/domains?budget=NaN")
         self.assertEqual(error.exception.code, 400)
 
+    def test_discovery_cannot_show_unchecked_domains(self):
+        with self.get('/api/discover?availability=unchecked') as response:
+            self.assertEqual(json.load(response)['total'], 0)
+        with store.connect(self.path) as db:
+            db.execute('''INSERT INTO checks(domain,provider,status,checked_at,imported_at)
+                VALUES('anchor.com','test','available',?,?)''', (store.now(), store.now()))
+        with self.get('/api/discover?max_length=6&sort=alphabetical') as response:
+            item = json.load(response)['items'][0]
+            self.assertEqual(item['domain'], 'anchor.com')
+            self.assertEqual(item['name_type'], 'unclassified')
+
     def test_review_persists(self):
         request = Request(self.base + "/api/review", data=json.dumps({"domain": "anchor.com", "review": "keep"}).encode(),
                           headers={"Content-Type": "application/json"})

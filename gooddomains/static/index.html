@@ -3,21 +3,34 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gooddomains — find a name worth keeping</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;display=swap">
   <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
 </head>
 <body>
-  <header><a class="brand" href="/">gooddomains<span>a name worth keeping</span></a><span class="badge">LOCAL EXPLORER · V0.2</span></header>
+  <header><a class="brand" href="/">gooddomains</a></header>
   <main>
-    <section class="intro"><div><p class="eyebrow">LESS GENERATING. MORE DISCOVERING.</p><h1>A better name<br>is out there<span>.</span></h1><p class="lede">Explore the index. Find the right impression.<br>Keep the names that feel like your company.</p></div><aside><span class="asterisk">✳</span><p>A good name depends<br>on what you want to be.</p><small>Solid. Catchy. Scientific. You decide.</small></aside></section>
+    <h1 class="sr-only">Domain explorer</h1>
     <section class="workspace" aria-label="Domain explorer">
-      <div class="toolbar"><div><p class="eyebrow">01 / SET THE IMPRESSION</p><div id="profiles" class="profiles"></div></div><div class="counts" id="stats" aria-live="polite"></div></div>
-      <p id="profile-note" class="subtle"></p>
-      <form id="filters"><label class="search">Find a word<input id="query" placeholder="e.g. stone, orbit, mint" autocomplete="off"></label><label>Budget (USD)<select id="budget"><option value="">Any price</option><option value="5000">Observed price ≤ $5,000</option><option value="1000">Observed price ≤ $1,000</option></select></label><label>Price type<select id="price-type"><option value="asking">Aftermarket asking price</option><option value="registration">Registration quote</option></select></label><label>Registrar status<select id="availability"><option value="">Any status</option><option value="available">Available to register</option><option value="unchecked">Not checked</option><option value="registered">Registered</option><option value="premium">Premium listing</option><option value="unknown">Unknown result</option><option value="stale">Stale check</option></select></label><label>Observed within<select id="days"><option value="30">30 days</option><option value="7">7 days</option><option value="90">90 days</option></select></label><label>Your shortlist<select id="review"><option value="">All names</option><option value="keep">Kept</option><option value="unreviewed">Unreviewed</option><option value="reject">Passed</option></select></label></form>
-      <div class="list-heading"><span id="result-count" aria-live="polite">Loading names…</span><span>Ranked for your selected impression</span></div>
+      <p class="availability-note">Available .com domains <span>· Registrar-checked; recheck before buying.</span></p>
+      <form id="filters" aria-label="Filter available domains">
+        <label class="search">Search<input id="query" placeholder="Search names…" autocomplete="off"></label>
+        <label>Min. length<input id="min-length" type="number" min="1" max="63" value="1"></label>
+        <label>Max. length<input id="max-length" type="number" min="1" max="63" value="63"></label>
+        <label>Name type<select id="name-type"><option value="">All types</option><option value="two_words">Two-word compound</option><option value="invented">Made-up word</option><option value="single_word">Single real word</option><option value="affixed">Word + prefix / suffix</option><option value="unclassified">Unclassified</option></select></label>
+        <label>Sort by<select id="sort"><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="alphabetical">A–Z</option><option value="recent">Recently checked</option><option value="price">Lowest registration price (USD)</option></select></label>
+        <label>Shortlist<select id="review"><option value="">All names</option><option value="keep">Kept</option><option value="unreviewed">Unreviewed</option><option value="reject">Passed</option></select></label>
+        <label>Registration price<select id="budget"><option value="">Any price</option><option value="20">Up to $20</option><option value="100">Up to $100</option><option value="5000">Up to $5,000</option></select></label>
+        <label>Checked within<select id="days"><option value="1">24 hours</option><option value="7" selected>7 days</option><option value="30">30 days</option></select></label>
+        <button id="reset-filters" type="button">Reset</button>
+      </form>
+      <p class="filter-note">Length excludes .com. Types describe how a name was formed; compound means two whole words. Prices are quoted totals for the displayed term.</p>
+      <p class="result-count" id="result-count" aria-live="polite">Loading…</p>
+      <div class="list-heading"><span>Name</span><span>Name type</span><span class="actions-heading">Actions</span></div>
       <p id="error" role="alert" hidden></p><div id="results"></div>
-      <div class="pagination"><button id="prev">← Previous</button><span id="page"></span><button id="next">Next →</button></div>
+      <nav class="pagination" aria-label="Results pages"><button id="prev">← Previous</button><span id="page"></span><button id="next">Next →</button></nav>
     </section>
-    <section class="notes"><div><p class="eyebrow">A SCORE IS A STARTING POINT</p><p>These are English-centric rules, not a learned model or a valuation. Open any score to see its ingredients. Invented words can be excellent even when they score poorly here.</p></div><div><p class="eyebrow">EVIDENCE BEFORE ASSUMPTIONS</p><p>Names in the index may already belong to someone. An observed asking price can go stale. Availability, company fit, and existing brand conflicts still need your review.</p></div></section>
-  </main><footer>gooddomains <span>An index for developing taste.</span></footer>
+  </main>
 </body>
 </html>

@@ -105,8 +105,24 @@ def put(db, domain, *, source, kind="candidate", price_usd=None, observed_at=Non
         (domain, source, kind, observed_at, timestamp, price_usd, listing_url or None))
 
 
+NAME_TYPE_SQL = """CASE
+    WHEN EXISTS(SELECT 1 FROM candidates g WHERE g.domain=d.domain AND g.strategy='compound') THEN 'two_words'
+    WHEN EXISTS(SELECT 1 FROM candidates g WHERE g.domain=d.domain AND g.strategy IN ('suffix','affixed')) THEN 'affixed'
+    WHEN EXISTS(SELECT 1 FROM candidates g WHERE g.domain=d.domain AND g.strategy='invented') THEN 'invented'
+    WHEN EXISTS(SELECT 1 FROM candidates g WHERE g.domain=d.domain AND g.strategy IN ('metaphor','uncommon')) THEN 'single_word'
+    ELSE 'unclassified' END"""
+
+
 def listing(db, *, query="", budget=None, days=30, review="", limit=100, offset=0, profile="general",
-            availability="", price_type="asking"):
+            availability="", price_type="asking", min_length=1, max_length=63, name_type="", sort="score"):
+    orders = {'score': 'r.score DESC,r.domain', 'shortest': 'length(d.domain),d.domain',
+              'longest': 'length(d.domain) DESC,d.domain', 'alphabetical': 'd.domain',
+              'recent': '(SELECT checked_at FROM latest_checks WHERE domain=d.domain) DESC,d.domain',
+              'price': "(SELECT CASE WHEN status='available' AND currency='USD' AND checked_at>=? THEN price END FROM latest_checks WHERE domain=d.domain) ASC NULLS LAST,d.domain"}
+    if sort not in orders or name_type not in ('', 'two_words', 'single_word', 'invented', 'affixed', 'unclassified'):
+        raise ValueError('Unknown sort or name type')
+    if not 1 <= min_length <= max_length <= 63:
+        raise ValueError('Length must be 1–63 characters, with minimum no greater than maximum')
     if availability not in ("", "available", "registered", "premium", "unknown", "unchecked", "stale"):
         raise ValueError("Unknown availability filter")
     if price_type not in ("asking", "registration"):
@@ -121,6 +137,11 @@ def listing(db, *, query="", budget=None, days=30, review="", limit=100, offset=
         raise ValueError("Unknown review filter")
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
     clauses, args = ["1=1"], []
+    clauses.append('length(d.domain)-4 BETWEEN ? AND ?')
+    args.extend([min_length, max_length])
+    if name_type:
+        clauses.append(f'({NAME_TYPE_SQL})=?')
+        args.append(name_type)
     if availability == "unchecked":
         clauses.append("NOT EXISTS (SELECT 1 FROM checks c WHERE c.domain=d.domain)")
     elif availability:
@@ -147,10 +168,11 @@ def listing(db, *, query="", budget=None, days=30, review="", limit=100, offset=
         args.append(review)
     where = " AND ".join(clauses)
     total = db.execute(f"SELECT COUNT(*) FROM domains d WHERE {where}", args).fetchone()[0]
-    rows = db.execute(f"""SELECT d.domain,d.created_at,d.review,r.score,r.ranking
+    rows = db.execute(f"""SELECT d.domain,d.created_at,d.review,r.score,r.ranking,
+                      length(d.domain)-4 AS length, {NAME_TYPE_SQL} AS name_type
                       FROM rankings r JOIN domains d ON d.domain=r.domain
-                      WHERE r.profile=? AND {where} ORDER BY r.score DESC,r.domain LIMIT ? OFFSET ?""",
-                      [profile, *args, limit, offset]).fetchall()
+                      WHERE r.profile=? AND {where} ORDER BY {orders[sort]} LIMIT ? OFFSET ?""",
+                      [profile, *args, *([cutoff] if sort == 'price' else []), limit, offset]).fetchall()
     items = []
     for row in rows:
         item = dict(row)

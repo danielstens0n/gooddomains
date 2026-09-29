@@ -15,7 +15,9 @@ python3 -m gooddomains import data/demo.txt --source demo
 python3 -m gooddomains serve
 ```
 
-Open **http://127.0.0.1:8000**. Switch between Balanced, Solid & established, Catchy & playful, and Scientific & precise. Expand a score to inspect its components and source observations. Keep or pass on names; click the selected action again to clear it.
+Open **http://127.0.0.1:8000**. The explorer shows only domains last observed available within the selected window (7 days by default). Filter by length excluding `.com`, name structure, registration price, freshness, and shortlist. Sort by length, A–Z, latest check, or USD registration price (unknown/non-USD prices last). Keep or pass on names; click the selected action again to clear it. Scores and impression profiles remain internal/CLI tools, not browser controls.
+
+Name structure comes from generator provenance: single real word, two-word compound, made-up word, or word plus affix. “Compound” and “two real words” share one category. Names without provenance remain unclassified; the current generator does not yet produce a dedicated affix cohort. These labels describe construction, not trademark clearance or linguistic judgments across every language. Unchecked demo names intentionally do not appear in discovery.
 
 The 48 handwritten demo names are examples, **not availability or sale claims**. Some are existing brands. There are no invented prices. Selecting a price filter on the demo intentionally returns no results.
 
@@ -27,7 +29,6 @@ reports. `python3 scripts/daily_scan.py --count 1000` runs the worker on macOS o
 Linux with Spaceship read-only API credentials supplied through the environment.
 Scheduling requires a configured host; it is not activated by cloning this repo.
 
-![Gooddomains explorer with scientific ranking selected](docs/explorer.png)
 
 ## What makes a great .com?
 
@@ -41,7 +42,7 @@ A useful working hypothesis:
 
 These are hypotheses to test with people, not universal laws. “Short” is measurable; “trustworthy” is contextual. The goal is eventually to learn `preference(name A, name B | company brief, audience, language)` and use that to produce a shortlist.
 
-Inspired by the [PG discussion](https://x.com/paulg/status/2104600731361677493) and his earlier [Change Your Name](https://www.paulgraham.com/name.html) essay. The follow-up supplied with this project emphasizes that a name's desired impression depends on the company: solid, catchy, or scientific. The current profiles make that distinction explicit.
+Inspired by the [PG discussion](https://x.com/paulg/status/2104600731361677493) and his earlier [Change Your Name](https://www.paulgraham.com/name.html) essay. The follow-up supplied with this project emphasizes that a name's desired impression depends on the company. Internal ranking profiles explore that distinction; discovery uses objective filters and does not label heuristic rankings as popularity.
 
 ## What works today
 

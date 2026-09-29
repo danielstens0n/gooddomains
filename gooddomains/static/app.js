@@ -1,6 +1,8 @@
 const $ = id => document.getElementById(id);
-let profile = 'general', offset = 0, total = 0, sequence = 0, timer;
+let offset = 0, total = 0, sequence = 0, timer;
 const limit = 50;
+const filterDefaults = {'min-length':'1', 'max-length':'63', 'name-type':'', sort:'shortest', review:'', budget:'', days:'7'};
+const typeLabels = {two_words:'Two-word compound', invented:'Made-up word', single_word:'Single real word', affixed:'Word + affix', unclassified:'Unclassified'};
 const money = (value, currency='USD') => new Intl.NumberFormat('en-US', {style:'currency', currency, maximumFractionDigits:2}).format(value);
 function node(tag, text, cls) { const el = document.createElement(tag); if(text !== undefined) el.textContent = text; if(cls) el.className = cls; return el; }
 async function api(path, options) {
@@ -10,51 +12,18 @@ async function api(path, options) {
   return data;
 }
 function error(message) { $('error').textContent = message; $('error').hidden = !message; }
-function row(item, index) {
+function row(item) {
   const el = node('article', undefined, 'domain-row');
-  el.append(node('span', String(offset + index + 1).padStart(2, '0'), 'number'));
+  if (item.review) el.classList.add('reviewed');
   const info = node('div'), name = node('div', item.domain.slice(0, -4), 'name');
   name.append(node('span', '.com')); info.append(name);
-  info.append(node('span', [...new Set(item.observations.map(o => o.source))].join(' · '), 'source'));
-  const priced = item.recent_price_usd !== null;
-  info.append(node('div', priced ? `${money(item.recent_price_usd)} observed aftermarket asking price` : 'No recent aftermarket asking price', priced ? 'price known' : 'price'));
   const check = item.latest_check;
-  let availability = 'Not checked at a registrar';
-  if (check) {
-    availability = `${item.availability === 'stale' ? 'Stale check' : 'Observed ' + check.status} · ${check.provider} · ${check.checked_at.slice(0,10)}`;
-    if (check.price !== null) availability += ` · ${money(check.price, check.currency)} ${check.status === 'available' ? 'registration / ' + check.term_months + ' months' : 'premium quote'}`;
-  }
-  info.append(node('div', availability, item.availability === 'available' ? 'price known' : 'price'));
+  let evidence = `${item.length} letters · Checked ${new Date(check.checked_at).toLocaleDateString()} · ${check.provider}`;
+  info.append(node('div', evidence, 'price'));
+  info.append(node('div', check.price == null ? 'Registration price not quoted' : `${money(check.price, check.currency)} / ${check.term_months} months`, 'price known'));
   el.append(info);
-  const details = node('details', undefined, 'score-wrap'), summary = node('summary');
-  summary.append(node('span', item.score.toFixed(1), 'score'), node('span', 'view score'));
-  details.append(summary);
-  const breakdown = node('div', undefined, 'breakdown');
-  for (const [key, feature] of Object.entries(item.ranking.features)) {
-    const p = node('p');
-    p.append(node('b', `${key} · ${feature.value}/100 · weight ${feature.weight}%`), node('br'), node('span', feature.reason));
-    breakdown.append(p);
-  }
-  breakdown.append(node('p', `Model: ${item.ranking.version} / ${item.ranking.profile}`));
-  for (const candidate of item.candidates || []) {
-    const metadata = JSON.parse(candidate.components);
-    breakdown.append(node('p', `${candidate.run} · ${candidate.brief} · ${candidate.strategy} · ${metadata.parts.join(' + ')}`));
-  }
-  if (check) {
-    const p = node('p', `Registrar check: ${check.status} · ${check.checked_at}. Reconfirm before purchase.`);
-    if (check.evidence_url) {
-      const a = node('a', ' Source'); a.href = check.evidence_url; a.target = '_blank'; a.rel = 'noopener noreferrer'; p.append(a);
-    }
-    breakdown.append(p);
-  }
-  for (const observation of item.observations) {
-    const p = node('p', `${observation.source} · ${observation.kind} · observed ${observation.observed_at}${observation.price_usd == null ? '' : ' · ' + money(observation.price_usd)}`);
-    if (observation.listing_url) {
-      const link = node('a', ' Open source'); link.href = observation.listing_url; link.target = '_blank'; link.rel = 'noopener noreferrer'; p.append(link);
-    }
-    breakdown.append(p);
-  }
-  details.append(breakdown); el.append(details);
+  const type = node('div', typeLabels[item.name_type] || 'Unclassified', 'name-type');
+  el.append(type);
   const actions = node('div', undefined, 'actions');
   for (const [verdict, label] of [['keep','Keep'],['reject','Pass']]) {
     const button = node('button', label); button.setAttribute('aria-pressed', String(item.review === verdict));
@@ -72,43 +41,35 @@ function row(item, index) {
 }
 async function load() {
   const request = ++sequence;
-  const params = new URLSearchParams({profile, offset, limit, q:$('query').value, budget:$('budget').value, days:$('days').value, review:$('review').value, availability:$('availability').value, price_type:$('price-type').value});
+  const params = new URLSearchParams({offset, limit, q:$('query').value, budget:$('budget').value, days:$('days').value, review:$('review').value, min_length:$('min-length').value || '1', max_length:$('max-length').value || '63', name_type:$('name-type').value, sort:$('sort').value});
   error('');
   try {
-    const [data, stats] = await Promise.all([api('/api/domains?' + params), api('/api/stats')]);
+    const [data, stats] = await Promise.all([api('/api/discover?' + params), api('/api/stats')]);
     if (request !== sequence) return;
     total = data.total;
     if (offset >= total && offset > 0) { offset = Math.max(0, Math.ceil(total / limit) - 1) * limit; return load(); }
     $('results').replaceChildren(...data.items.map(row));
-    $('result-count').textContent = `${total.toLocaleString()} names in this view`;
-    $('stats').replaceChildren(node('strong', stats.domains.toLocaleString()), node('span', ` indexed · ${stats.kept} kept`));
+    $('result-count').textContent = `${total.toLocaleString()} available names`;
     $('page').textContent = total ? `${offset + 1}–${Math.min(offset + limit, total)} of ${total.toLocaleString()}` : 'No results';
     $('prev').disabled = offset === 0; $('next').disabled = offset + limit >= total;
     if (!data.items.length) {
       const empty = node('div', undefined, 'empty');
-      empty.append(node('strong', stats.domains ? 'No names match these filters.' : 'Your index starts here.'));
-      empty.append(node('span', $('availability').value || $('budget').value ? 'No matching recent evidence. Import registrar results, or widen your filters. Generated names start unchecked.' : 'Try another filter, or import a domain list from the terminal.'));
-      if (!stats.domains) empty.append(node('code', 'python3 -m gooddomains import data/demo.txt --source demo'));
+      empty.append(node('strong', stats.domains ? 'No matches' : 'No names yet'));
+      empty.append(node('span', 'No recently confirmed available names match. Adjust the filters or refresh registrar checks.'));
+
       $('results').append(empty);
     }
   } catch (e) { if (request === sequence) error(e.message); }
 }
 async function init() {
   try {
-    const profiles = await api('/api/profiles');
-    for (const [key, value] of Object.entries(profiles)) {
-      const button = node('button', value.label); button.setAttribute('aria-pressed', String(key === profile));
-      button.onclick = () => {
-        profile = key; offset = 0;
-        [...$('profiles').children].forEach(b => b.setAttribute('aria-pressed', String(b === button)));
-        $('profile-note').textContent = value.description; load();
-      };
-      $('profiles').append(button);
-    }
-    $('profile-note').textContent = profiles[profile].description;
     $('filters').onsubmit = e => e.preventDefault();
+    $('reset-filters').onclick = () => {
+      for (const [id, value] of Object.entries(filterDefaults)) $(id).value = value;
+      $('query').value = ''; offset = 0; load();
+    };
     $('query').oninput = () => { ++sequence; clearTimeout(timer); timer = setTimeout(() => { offset = 0; load(); }, 180); };
-    for (const id of ['budget','days','review','availability','price-type']) $(id).onchange = () => { offset = 0; load(); };
+    for (const id of Object.keys(filterDefaults)) $(id).onchange = () => { offset = 0; load(); };
     $('prev').onclick = () => { offset = Math.max(0, offset - limit); load(); };
     $('next').onclick = () => { offset += limit; load(); };
     await load();
